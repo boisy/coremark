@@ -13,44 +13,18 @@
 # limitations under the License.
 # 
 # Original Author: Shay Gal-on
-
+# Adapted for the Tandy Color Computer port by Boisy Pitre on Aug-15-23
+#
 # Make sure the default target is to simply build and run the benchmark.
 RSTAMP = v1.0
 
-.PHONY: run score
-run: $(OUTFILE) rerun score
-
-score:
-	@echo "Check run1.log and run2.log for results."
-	@echo "See README.md for run and reporting rules." 
-	
-ifndef PORT_DIR
-# Ports for a couple of common self hosted platforms
-UNAME=$(shell if command -v uname 2> /dev/null; then uname ; fi)
-ifneq (,$(findstring CYGWIN,$(UNAME)))
-PORT_DIR=cygwin
-endif
-ifneq (,$(findstring Darwin,$(UNAME)))
-PORT_DIR=macos
-endif
-ifneq (,$(findstring FreeBSD,$(UNAME)))
-PORT_DIR=freebsd
-endif
-ifneq (,$(findstring Linux,$(UNAME)))
-PORT_DIR=linux
-endif
-endif
-ifndef PORT_DIR
-$(error PLEASE define PORT_DIR! (e.g. make PORT_DIR=simple)) 
-endif
+PORT_DIR=coco
 vpath %.c $(PORT_DIR)
 vpath %.h $(PORT_DIR)
 vpath %.mak $(PORT_DIR)
 include $(PORT_DIR)/core_portme.mak
 
-ifndef ITERATIONS
-ITERATIONS=0
-endif
+ITERATIONS=1
 ifdef REBUILD
 FORCE_REBUILD=force_rebuild
 endif
@@ -61,7 +35,7 @@ CORE_FILES = core_list_join core_main core_matrix core_state core_util
 ORIG_SRCS = $(addsuffix .c,$(CORE_FILES))
 SRCS = $(ORIG_SRCS) $(PORT_SRCS)
 OBJS = $(addprefix $(OPATH),$(addsuffix $(OEXT),$(CORE_FILES)) $(PORT_OBJS))
-OUTNAME = coremark$(EXE)
+OUTNAME = COREMARK$(EXE)
 OUTFILE = $(OPATH)$(OUTNAME)
 LOUTCMD = $(OFLAG) $(OUTFILE) $(LFLAGS_END)
 OUTCMD = $(OUTFLAG) $(OUTFILE) $(LFLAGS_END)
@@ -69,22 +43,22 @@ OUTCMD = $(OUTFLAG) $(OUTFILE) $(LFLAGS_END)
 HEADERS = coremark.h 
 CHECK_FILES = $(ORIG_SRCS) $(HEADERS)
 
-$(OPATH):
-	$(MKDIR) $(OPATH)
-
 .PHONY: compile link
 ifdef SEPARATE_COMPILE
+
 $(OPATH)$(PORT_DIR):
 	$(MKDIR) $(OPATH)$(PORT_DIR)
 
 compile: $(OPATH) $(OPATH)$(PORT_DIR) $(OBJS) $(HEADERS) 
+
 link: compile 
-	$(LD) $(LFLAGS) $(XLFLAGS) $(OBJS) $(LOUTCMD)
+	$(LD) $(LFLAGS) $(XLFLAGS) $(LOUTCMD) $(OBJS)
 	
 else
 
-compile: $(OPATH) $(SRCS) $(HEADERS) 
-	$(CC) $(CFLAGS) $(XCFLAGS) $(SRCS) $(OUTCMD)
+compile: $(SRCS) $(HEADERS) 
+	$(CC) $(CFLAGS) $(XCFLAGS) $(OUTCMD) $(SRCS)
+
 link: compile 
 	@echo "Link performed along with compile"
 
@@ -94,11 +68,6 @@ $(OUTFILE): $(SRCS) $(HEADERS) Makefile core_portme.mak $(EXTRA_DEPENDS) $(FORCE
 	$(MAKE) port_prebuild
 	$(MAKE) link
 	$(MAKE) port_postbuild
-
-.PHONY: rerun
-rerun: 
-	$(MAKE) XCFLAGS="$(XCFLAGS) -DPERFORMANCE_RUN=1" load run1.log
-	$(MAKE) XCFLAGS="$(XCFLAGS) -DVALIDATION_RUN=1" load run2.log
 
 PARAM1=$(PORT_PARAMS) 0x0 0x0 0x66 $(ITERATIONS)
 PARAM2=$(PORT_PARAMS) 0x3415 0x3415 0x66 $(ITERATIONS)
@@ -124,8 +93,14 @@ load: $(OUTFILE)
 
 .PHONY: clean
 clean:
-	rm -f $(OUTFILE) $(OBJS) $(OPATH)*.log *.info $(OPATH)index.html $(PORT_CLEAN)
+	rm -f $(OUTFILE) $(OBJS) $(OPATH)*.log *.info $(OPATH)index.html $(PORT_CLEAN) *.dsk
 
+dsk: compile
+	decb dskini coremark.dsk
+	echo "10 LOADM\"COREMARK\":EXEC" >/tmp/basic
+	decb copy -0 -b -t /tmp/basic coremark.dsk,\*.BAS
+	decb copy -2 -b $(OUTFILE) coremark.dsk,
+	
 .PHONY: force_rebuild
 force_rebuild:
 	echo "Forcing Rebuild"
@@ -134,7 +109,3 @@ force_rebuild:
 check:
 	md5sum -c coremark.md5 
 
-ifdef ETC
-# Targets related to testing and releasing CoreMark. Not part of the general release!
-include Makefile.internal
-endif	

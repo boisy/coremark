@@ -21,31 +21,50 @@
 OUTFLAG= -o
 # Flag : CC
 #	Use this flag to define compiler to use
-CC = gcc
+CC 		= cmoc
+# Flag : LD
+#	Use this flag to define compiler to use
+LD		= cmoc
+# Flag : AS
+#	Use this flag to define compiler to use
+AS		= lwasm
 # Flag : CFLAGS
 #	Use this flag to define compiler options. Note, you can add compiler options from the command line using XCFLAGS="other flags"
-PORT_CFLAGS = -O2
+PORT_CFLAGS = -DCLOCKS_PER_SEC=60
 FLAGS_STR = "$(PORT_CFLAGS) $(XCFLAGS) $(XLFLAGS) $(LFLAGS_END)"
-CFLAGS = $(PORT_CFLAGS) -I$(PORT_DIR) -I. -DFLAGS_STR=\"$(FLAGS_STR)\"
+CFLAGS = $(PORT_CFLAGS) -I$(PORT_DIR) -I. -DFLAGS_STR=\"$(FLAGS_STR)\" 
 #Flag : LFLAGS_END
 #	Define any libraries needed for linking or other flags that should come at the end of the link line (e.g. linker scripts). 
 #	Note : On certain platforms, the default clock_gettime implementation is supported but requires linking of librt.
+#SEPARATE_COMPILE=1
+# Flag : SEPARATE_COMPILE
+# You must also define below how to create an object file, and how to link.
+OBJOUT 	= -o
+LFLAGS 	= 
+ASFLAGS =
+OFLAG 	= -o
+COUT 	= -c
+
 LFLAGS_END = 
 # Flag : PORT_SRCS
 # 	Port specific source files can be added here
-PORT_SRCS = $(PORT_DIR)/core_portme.c
-# Flag : LOAD
-#	For a simple port, we assume self hosted compile and run, no load needed.
-
-# Flag : RUN
-#	For a simple port, we assume self hosted compile and run, simple invocation of the executable
-
-#For native compilation and execution
-LOAD = echo Loading done
-RUN = 
+#	You may also need cvt.c if the fcvt functions are not provided as intrinsics by your compiler!
+PORT_SRCS = $(PORT_DIR)/core_portme.c #$(PORT_DIR)/ee_printf.c
+PORT_OBJS = core_portme.o #ee_printf.o
+vpath %.c $(PORT_DIR)
+vpath %.s $(PORT_DIR)
 
 OEXT = .o
-EXE = .exe
+EXE = .BIN
+
+$(OPATH)$(PORT_DIR)/%$(OEXT) : %.c
+	$(CC) $(CFLAGS) $(XCFLAGS) $(COUT) $(OBJOUT) $@ $<
+
+$(OPATH)%$(OEXT) : %.c
+	$(CC) $(CFLAGS) $(XCFLAGS) $(COUT) $(OBJOUT) $@ $<
+
+$(OPATH)$(PORT_DIR)/%$(OEXT) : %.s
+	$(AS) $(ASFLAGS) $(OBJOUT) $@ $<
 
 # Target : port_pre% and port_post%
 # For the purpose of this simple port, no pre or post steps needed.

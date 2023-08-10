@@ -15,13 +15,13 @@ limitations under the License.
 
 Original Author: Shay Gal-on
 */
-
 /* Topic : Description
         This file contains configuration constants required to execute on
    different platforms
 */
 #ifndef CORE_PORTME_H
 #define CORE_PORTME_H
+
 /************************/
 /* Data types and settings */
 /************************/
@@ -36,20 +36,20 @@ Original Author: Shay Gal-on
         and implementation of functions thereof.
 */
 #ifndef HAS_TIME_H
-#define HAS_TIME_H 1
+#define HAS_TIME_H 0
 #endif
 /* Configuration : USE_CLOCK
         Define to 1 if platform has the time.h header file,
         and implementation of functions thereof.
 */
 #ifndef USE_CLOCK
-#define USE_CLOCK 1
+#define USE_CLOCK 0
 #endif
 /* Configuration : HAS_STDIO
         Define to 1 if the platform has stdio.h.
 */
 #ifndef HAS_STDIO
-#define HAS_STDIO 1
+#define HAS_STDIO 0
 #endif
 /* Configuration : HAS_PRINTF
         Define to 1 if the platform has stdio.h and implements the printf
@@ -59,12 +59,6 @@ Original Author: Shay Gal-on
 #define HAS_PRINTF 1
 #endif
 
-/* Configuration : CORE_TICKS
-        Define type of return from the timing functions.
- */
-#include <time.h>
-typedef clock_t CORE_TICKS;
-
 /* Definitions : COMPILER_VERSION, COMPILER_FLAGS, MEM_LOCATION
         Initialize these strings per platform
 */
@@ -72,12 +66,12 @@ typedef clock_t CORE_TICKS;
 #ifdef __GNUC__
 #define COMPILER_VERSION "GCC"__VERSION__
 #else
-#define COMPILER_VERSION "Please put compiler version here (e.g. gcc 4.1)"
+#define COMPILER_VERSION "CMOC"
 #endif
 #endif
 #ifndef COMPILER_FLAGS
 #define COMPILER_FLAGS \
-    FLAGS_STR /* "Please put compiler flags here (e.g. -o3)" */
+    "" /* "Please put compiler flags here (e.g. -o3)" */
 #endif
 #ifndef MEM_LOCATION
 #define MEM_LOCATION "STACK"
@@ -91,19 +85,33 @@ typedef clock_t CORE_TICKS;
         ee_ptr_int needs to be the data type used to hold pointers, otherwise
    coremark may fail!!!
 */
+
+#ifdef _CMOC_VERSION_
+#include <cmoc.h>
+#else
+#define NULL 0
+#endif
+
 typedef signed short   ee_s16;
 typedef unsigned short ee_u16;
-typedef signed int     ee_s32;
+typedef signed long    ee_s32;
 typedef double         ee_f32;
 typedef unsigned char  ee_u8;
-typedef unsigned int   ee_u32;
-typedef ee_u32         ee_ptr_int;
+typedef unsigned long  ee_u32;
+typedef ee_u16         ee_ptr_int;
 typedef size_t         ee_size_t;
+
 /* align_mem :
         This macro is used to align an offset to point to a 32b value. It is
    used in the Matrix algorithm to initialize the input memory blocks.
 */
 #define align_mem(x) (void *)(4 + (((ee_ptr_int)(x)-1) & ~3))
+
+/* Configuration : CORE_TICKS
+        Define type of return from the timing functions.
+ */
+#define CORETIMETYPE ee_u16
+typedef ee_u16 CORE_TICKS;
 
 /* Configuration : SEED_METHOD
         Defines method to get seed values that cannot be computed at compile
@@ -204,5 +212,7 @@ void portable_fini(core_portable *p);
 #define VALIDATION_RUN 1
 #endif
 #endif
+
+int ee_printf(const char *fmt, ...);
 
 #endif /* CORE_PORTME_H */
